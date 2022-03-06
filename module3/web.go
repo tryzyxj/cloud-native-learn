@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 )
 
 type userError interface {
@@ -16,6 +17,14 @@ type userError interface {
 
 type appHandler func(writer http.ResponseWriter,
 	request *http.Request) error
+
+func getCurrentIP(r *http.Request) string {
+	ip := r.Header.Get("X-Real-IP")
+	if ip == "" {
+		ip = strings.Split(r.RemoteAddr, ":")[0]
+	}
+	return ip
+}
 
 func errWrapper(
 	handler appHandler) func(
@@ -33,7 +42,7 @@ func errWrapper(
 			// 3.Server 端记录访问日志包括客户端 IP，HTTP 返回码，输出到 server 端的标准输出
 			// 是不是 status 为 0 的时候都返回 200 呢？
 			fmt.Printf("request ip is：%s, status code is：%v\n",
-				request.RemoteAddr,
+				getCurrentIP(request),
 				reflect.ValueOf(writer).Elem().FieldByName("status"))
 		}()
 
@@ -55,6 +64,10 @@ func errWrapper(
 }
 
 func main() {
+	//mux := http.NewServeMux()
+	//err := http.ListenAndServe(":8888", mux)
+	//mux.HandleFunc("/", index)
+
 	// 模拟正常请求，完成 1、2、3 题
 	http.HandleFunc("/header/",
 		errWrapper(headerReturn.HandleHeaderReturn))
